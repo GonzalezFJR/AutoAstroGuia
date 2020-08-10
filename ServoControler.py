@@ -32,6 +32,10 @@ class TiltAndPan:
     self.azm0 = 0
     self.azm_last  = 0
     self.verbose = verbose
+    self.step = 10 # from 0 to 100
+
+  def SetStep(self, step=10):
+    self.step = step
 
   def SetVerbose(self, verbose=True):
     ''' Set verbose '''
@@ -70,20 +74,35 @@ class TiltAndPan:
     oalt = self.LocalAltitude(alt)
     if alt <  10: alt = 10
     if alt > 170: alt = 170
+    self.MoveServo(self.servo1, oalt, self.alt_last)
     self.alt_last = alt
-    self.servo1.ChangeDutyCycle(2+(oalt/18))
-    time.sleep(0.5)
-    self.servo1.ChangeDutyCycle(0)
     return oalt
 
   def GoToAzm(self, azm):
     ''' Change the azm '''
     oazm = self.LocalAltitude(azm)
+    self.MoveServo(self.servo2, oazm, self.azm_last)
     self.azm_last = azm
-    self.servo2.ChangeDutyCycle(2+(oazm/18))
-    time.sleep(0.5)
-    self.servo2.ChangeDutyCycle(0)
     return oazm
+
+  def MoveServo(self, servo, angle, initial_angle):
+    if self.slow:
+      i = initial_angle
+      f = angle
+      nextAngle = i
+      step = self.step/10 # degrees
+      while abs(nextAngle - f) > step:
+        sign = ((f-i)/abs(f-i))
+        nextAngle = i + step*sign
+        servo.ChangeDutyCycle(2+(nextAngle/18))
+        i = nextAngle
+        time.sleep(0.01)
+        servo.ChangeDutyCycle(2+(nextAngle/18))
+      servo.ChangeDutyCycle(2+(angle/18))
+    else:
+      servo.ChangeDutyCycle(2+(angle/18))
+    time.sleep(0.5)
+    self.servo1.ChangeDutyCycle(0)
 
   def GoToAngleRaw(self, alt, azm):
     ''' Input must be in degrees and in correct ranges '''
