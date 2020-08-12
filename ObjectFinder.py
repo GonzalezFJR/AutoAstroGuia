@@ -5,7 +5,7 @@ import numpy as np
 import os, sys
 
 pathToCatalogs = './catalogs/'
-availableCatalogs = ['messier', 'flamsted', 'IC', 'NamedStars', 'NGC'] # HD
+availableCatalogs = ['messier', 'flamsted', 'IC', 'NamedStars', 'NGC', 'HD']
 
 class ObjectPointer:
 
