@@ -7,6 +7,7 @@
 
 import serial
 import time
+import os, sys
 
 serialName = '/dev/rfcomm0'
 timeSleep = 0.001
@@ -61,9 +62,77 @@ class serialReader:
     if verbose: print('[command] = ', command)
     return command
 
-def InterpretCommand(command):
-  keywords = ['STEP', 'AZM', 'ALT', 'DEC', 'RA', '<-', '-^-', '->', '-V-']
+##################################################################
+###
+def GetArrows(command):
+  ''' Command must be a string '''
+  arrows   = ['<-', '-^-', '->', '-V-']
+  arr = []
+  for a in arrows: 
+    n = command.count(a)
+    for i in range(n): arr.append(a)
+    command = command.replace(a, '')
+  return arr, command
+
+def IsValueCommand(command):
+  ''' Command must be a string '''
+  keywords = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
+  for k in keywords:
+    if k in command: return k
+  return False
+
+def SearchForValue(command, k):
+  ''' For example, command = "M55STEP4.5", k = "STEP"... returns [4.5, "M55"] '''
+  other = []
+  precommand = command[:command.index(k)]
+  if precommand != '': other.append(precommand)
+  postcommand = command[command.index(k)+len(k):]
+  val = ''
+  for c in postcommand:
+    if c.isdigit() or c=='.': val += c
+    else: break
+  postcommand = postcommand[len(val):]
+  val = float(val)
+  if postcommand != '': other.append(postcommand)
+  return val, other
+
+def GetListsOfCommands(command):
+  keywords = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
+  if   isinstance(command, list) and len(command) == 1 and ',' in command[0]: command = command[0].split(',')
+  elif isinstance(command, str ) and ',' in command: command = command.split(',')
+  if not isinstance(command, list): command = [command]
+  keycommands = {}
+  arrowcommands = []
+  goto = []
+  othercommands = []
+  while len(command) > 0:
+    commands = command
+    command = []
+    for c in commands:
+      if c == '': continue
+      arrowcommands, c = GetArrows(c)
+      k = IsValueCommand(c)
+      if not k: 
+        if c != '': goto.append(c)
+        continue
+      else:
+        value, other = SearchForValue(c, k)
+        keycommands[k] = value
+        command += other
+  return arrowcommands, keycommands, goto
+
+def InterpretArrows(arrows):
+  pass
+
+def InterpretKeyCommands(arrows):
+  pass
+
+def GoTo(val):
   pass
 
 if __name__=='__main__':
-  pass
+  command = sys.argv[1]
+  arrowcommands, keycommands, goto = GetListsOfCommands(command)
+  for a in arrowcommands: print(' >> Moving to ', a)
+  for k in keycommands  : print(' >> Executing [%s] (%1.4f)'%(k, keycommands[k]))
+  for g in goto         : print(' >> GoTo %s'%g)
