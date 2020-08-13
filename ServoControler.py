@@ -20,7 +20,7 @@ GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11,GPIO.OUT)
 GPIO.setup(12,GPIO.OUT)
 
-class TiltAndPan:
+class ServoControl:
   def __init__(self, pin1=11, pin2=12, verbose=False):
     ''' Initialize servos and angles '''
     self.servo1 = GPIO.PWM(pin1,50) 
@@ -121,6 +121,49 @@ class TiltAndPan:
     self.servo2.stop()
     GPIO.cleanup()
     print("Finishing servo control")
+
+  ########## Interaction
+  def GoToStandbyPosition(self):
+    ''' Goes to STANDBY by looking to the zenit '''
+    self.GoToAzm(90)
+    self.GoToAlt(80)
+    time.sleep(0.2)
+    self.GoToAlt(100)
+    time.sleep(0.2)
+    self.GoToAlt(90)
+
+  def SayYes(self):
+    ''' Says yes '''
+    for i in range(3):
+      self.GoToAlt(65)
+      time.sleep(0.3)
+      self.GoToAlt(40)
+      time.sleep(0.6)
+
+  def SayNo(self):
+    ''' Says no '''
+    self.GoToAlt(55)
+    for i in range(3):
+      self.GoToAzm(75)
+      time.sleep(0.3)
+      self.GoToAzm(105)
+      time.sleep(0.6)
+
+  ########## Commands
+  def InterpretArrows(self, arrows):
+    ''' Move the servo in given steps according to arrows '''
+    for c in arrows:
+      if c == '->': self.
+    pass
+
+  def InterpretKeyCommands(self, keycommands):
+    ''' Thats a dictionary with command : value '''
+    pass
+
+  def GoTo(self, val):
+    ''' Go to an object '''
+    pass
+
 
 if __name__=='__main__':
   pass

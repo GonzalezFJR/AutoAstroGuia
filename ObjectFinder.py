@@ -2,12 +2,12 @@ import astropy.units as u
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, EarthLocation, AltAz
 import numpy as np
-import os, sys
+import os, sys, time
 
 pathToCatalogs = './catalogs/'
 availableCatalogs = ['messier', 'flamsted', 'IC', 'NamedStars', 'NGC', 'HD']
 
-class ObjectPointer:
+class ObjectFinder:
 
   def __init__(self, lat=0, lon=0, alt=0, month=0, day=0, h=0, minut=0, seg=0, year=2020, utcoffset=1):
     ''' Initialize with local values of space and time '''
@@ -18,6 +18,7 @@ class ObjectPointer:
     self.pathToCatalogs = pathToCatalogs
     self.availableCatalogs = availableCatalogs
     self.otherCatalogs = availableCatalogs[:]
+    self.t0 = time.time()
     for c in ['NGC', 'messier', 'IC', 'HD']: 
       if c in self.otherCatalogs: self.otherCatalogs.pop(self.otherCatalogs.index(c))
     self.ReadCatalogs()
@@ -65,6 +66,12 @@ class ObjectPointer:
     utcoffset=utcoffset*u.hour
     self.time = Time('%i-%i-%i %i:%i:%i'%(year,month,day,h,minut,seg)) - utcoffset
 
+  def UpdateTime(self):
+    t = time.time()
+    dt = t-self.t0
+    self.time += dt*u.second
+    self.t0 = t
+
   def GetSkyCoorFromName(self, name):
     ''' Returns sky coordinates for a named object ''' 
     if self.LoadFromCatalogue:
@@ -78,6 +85,7 @@ class ObjectPointer:
     return coor
 
   def ToAltAzm(self, coordinates):
+    self.UpdateTime()
     coor = coordinates.transform_to(AltAz(obstime=self.time, location=self.coor))
     alt = coor.alt
     azm = coor.az
@@ -107,7 +115,7 @@ class ObjectPointer:
 
 if __name__=='__main__':
   obj = sys.argv[1]
-  o = ObjectPointer(43.3, -5.9, 200, 8, 10, 20, 35, 0, 2020, 1)
+  o = ObjectFinde(43.3, -5.9, 200, 12, 12, 20, 35, 0, 2020, 1)
   coor = o.GetSkyCoorFromName(obj)
   ra = coor.ra.degree; dec = coor.dec.degree
   alt, azm   = o.GetLocalSkyCoorFromName(obj)

@@ -15,7 +15,7 @@ resetCommandKey = 'START'
 endCommandKey = 'SEND'
 keywords = [ '<-', '-^-', '->', '-V-']
 
-class serialReader:
+class SerialReader:
   def __init__(self):
     self.initialize()
 
@@ -33,6 +33,21 @@ class serialReader:
       self.ser = ''
       print('Cannot link with app. Waiting...')
 
+  def read(self, verbose=0):
+    if verbose: print('reading...')
+    command = ''
+    line = ''
+    while line == '':
+    time.sleep(timeSleep)
+      try:
+        line = self.ser.readline().decode("utf-8")
+        line = line.replace(' ', '')
+      except:
+        self.initialize()
+    if verbose: print('[command] = ', command)
+    return command
+
+  '''
   def read(self, verbose=0):
     print('reading...')
     command = ''
@@ -61,6 +76,39 @@ class serialReader:
     while command.endswith(endCommandKey): command = command[:-4]
     if verbose: print('[command] = ', command)
     return command
+  '''
+
+##################################################################
+### GPS reader
+import pynmea2, time
+
+def GPSread(servoCtrl=None, verbose=False, maxtime=60):
+  s = SerialReader(verbose=verbose)
+  phrase = ''
+  t0 = time.time()
+  while not phrase.startswith('$GPRMC'):
+    phrase = ''
+    t = time.time()-t0
+    if t > maxtime: break
+    r = s.read()
+    phrase = r 
+    if isinstance(phrase, list) and len(phrase) == 1: phrase = phrase[0]
+  if phrase == '':
+    print('Unable to connect... returning None')
+    return None
+  p = pynmea2.parse(phrase)
+  lat = p.latitude
+  lon = p.longitude
+  alt = 200#p.altitude
+  d = p.datetime
+  if verbose:
+    print('Latitude  = ', lat)
+    print('Longitude = ', lon)
+    print('Altitude  = ', alt)
+    print('Date      = ', d)
+  return [lat, lon, alt, d.month, d.day, d.hour, d.minute, d.second, d.year, 0]
+  #lat, lon, alt, month, day, h, minute, sec, year, utcoffset = GPSreader()
+
 
 ##################################################################
 ###
@@ -120,15 +168,6 @@ def GetListsOfCommands(command):
         keycommands[k] = value
         command += other
   return arrowcommands, keycommands, goto
-
-def InterpretArrows(arrows):
-  pass
-
-def InterpretKeyCommands(arrows):
-  pass
-
-def GoTo(val):
-  pass
 
 if __name__=='__main__':
   command = sys.argv[1]
