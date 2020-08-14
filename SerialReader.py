@@ -51,6 +51,7 @@ class SerialReader:
 import pynmea2, time
 
 def GPSread(servoCtrl=None, verbose=False, maxtime=60):
+  if servoCtrl != None: servoCtrl.GoToStandbyPosition()
   s = SerialReader()
   phrase = ''
   t0 = time.time()
@@ -66,10 +67,16 @@ def GPSread(servoCtrl=None, verbose=False, maxtime=60):
       if not (pr.startswith('$GPRMC,') or pr.startswith('$GPGGA,')): continue
       p = pynmea2.parse(pr)
       if pr.startswith('$GPRMC'):
+        print('pr = ', pr)
+        if ',,' in pr or pr.count(',') < 12: continue
+        print('pr OK!')
         if hasattr(p, 'latitude'):  lat = p.latitude
         if hasattr(p, 'longitude'): lon = p.longitude
         if hasattr(p, 'datetime'):  d = p.datetime
       else:
+        print('pr2 = ', pr)
+        if pr.count(',') < 13: continue
+        print('pr2 OK!')
         if hasattr(p, 'altitude'): alt = p.altitude
   if verbose:
     print('Latitude  = ', lat)
@@ -79,6 +86,8 @@ def GPSread(servoCtrl=None, verbose=False, maxtime=60):
   if (lat==0) or (lon==0) or (alt==0) or (d==0):
     print('ERROR: could not connect to GPS!')
     if d == 0: d = datetime.datetime(2020,9,1,0,0,0)
+    if servoCtrl != None: servoCtrl.SayNo()
+  elif servoCtrl != None: servoCtrl.SayYes()
   return [lat, lon, alt, d.month, d.day, d.hour, d.minute, d.second, d.year, 0]
   #lat, lon, alt, month, day, h, minute, sec, year, utcoffset = GPSreader()
 
