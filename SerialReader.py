@@ -1,17 +1,17 @@
 '''
  Class to connect with an android app
  I'm using BlueTooth Serial Controller
- To reset a command, send 'START'
+ To reset a command, send 'RESET'
  To finish a command, send 'SEND'
 '''
 
 import serial
-import time
+import time, datetime
 import os, sys
 
 serialName = '/dev/rfcomm0'
 timeSleep = 0.001
-resetCommandKey = 'START'
+resetCommandKey = 'RESET'
 endCommandKey = 'SEND'
 keywords = [ '<-', '-^-', '->', '-V-']
 
@@ -35,143 +35,144 @@ class SerialReader:
 
   def read(self, verbose=0):
     if verbose: print('reading...')
-    command = ''
     line = ''
     while line == '':
-    time.sleep(timeSleep)
+      time.sleep(timeSleep)
       try:
         line = self.ser.readline().decode("utf-8")
         line = line.replace(' ', '')
       except:
         self.initialize()
-    if verbose: print('[command] = ', command)
-    return command
-
-  '''
-  def read(self, verbose=0):
-    print('reading...')
-    command = ''
-    line = ''
-    while line != endCommandKey:
-      time.sleep(timeSleep)
-      try:
-        line = self.ser.readline().decode("utf-8")
-      except:
-        self.initialize()
-      if verbose: print('[reading] : ', line)
-
-      if ',' in line: 
-        if line.endswith(','): line = line[:-1]
-        lines = line.split(',')
-        arrowSignal = [command]
-        for l in lines:
-          if l in keywords: arrowSignal.append(l)
-        return lines
-
-      if   line == resetCommandKey: command = ''
-      elif line == endCommandKey: pass
-      else                : 
-        command+=line
-        if command.endswith(endCommandKey): line = endCommandKey
-    while command.endswith(endCommandKey): command = command[:-4]
-    if verbose: print('[command] = ', command)
-    return command
-  '''
+    if verbose: print('[command] = ', line)
+    return line 
 
 ##################################################################
 ### GPS reader
 import pynmea2, time
 
 def GPSread(servoCtrl=None, verbose=False, maxtime=60):
-  s = SerialReader(verbose=verbose)
+  s = SerialReader()
   phrase = ''
   t0 = time.time()
-  while not phrase.startswith('$GPRMC'):
-    phrase = ''
+  lat, lon, alt, d = [0, 0, 0, 0]
+  #while not (phrase.startswith('$GPRMC,') and (not ',,' in phrase) and (phrase.count(',')>=12)) or not (phrase.startswith('$GPGGA,') and phrase.count(',') >= 14):
+  while (lat==0) or (lon==0) or (alt==0) or (d==0):
     t = time.time()-t0
     if t > maxtime: break
     r = s.read()
     phrase = r 
-    if isinstance(phrase, list) and len(phrase) == 1: phrase = phrase[0]
-  if phrase == '':
-    print('Unable to connect... returning None')
-    return None
-  p = pynmea2.parse(phrase)
-  lat = p.latitude
-  lon = p.longitude
-  alt = 200#p.altitude
-  d = p.datetime
+    if not isinstance(phrase, list): phrase = [phrase]
+    for pr in phrase:
+      if not (pr.startswith('$GPRMC,') or pr.startswith('$GPGGA,')): continue
+      p = pynmea2.parse(pr)
+      if pr.startswith('$GPRMC'):
+        if hasattr(p, 'latitude'):  lat = p.latitude
+        if hasattr(p, 'longitude'): lon = p.longitude
+        if hasattr(p, 'datetime'):  d = p.datetime
+      else:
+        if hasattr(p, 'altitude'): alt = p.altitude
   if verbose:
     print('Latitude  = ', lat)
     print('Longitude = ', lon)
     print('Altitude  = ', alt)
     print('Date      = ', d)
+  if (lat==0) or (lon==0) or (alt==0) or (d==0):
+    print('ERROR: could not connect to GPS!')
+    if d == 0: d = datetime.datetime(2020,9,1,0,0,0)
   return [lat, lon, alt, d.month, d.day, d.hour, d.minute, d.second, d.year, 0]
   #lat, lon, alt, month, day, h, minute, sec, year, utcoffset = GPSreader()
 
 
 ##################################################################
 ###
-def GetArrows(command):
-  ''' Command must be a string '''
-  arrows   = ['<-', '-^-', '->', '-V-']
-  arr = []
-  for a in arrows: 
-    n = command.count(a)
-    for i in range(n): arr.append(a)
-    command = command.replace(a, '')
-  return arr, command
 
-def IsValueCommand(command):
-  ''' Command must be a string '''
-  keywords = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
-  for k in keywords:
-    if k in command: return k
-  return False
+class CommandParser:
 
-def SearchForValue(command, k):
-  ''' For example, command = "M55STEP4.5", k = "STEP"... returns [4.5, "M55"] '''
-  other = []
-  precommand = command[:command.index(k)]
-  if precommand != '': other.append(precommand)
-  postcommand = command[command.index(k)+len(k):]
-  val = ''
-  for c in postcommand:
-    if c.isdigit() or c=='.': val += c
-    else: break
-  postcommand = postcommand[len(val):]
-  val = float(val)
-  if postcommand != '': other.append(postcommand)
-  return val, other
+  def __init__(self):
+    self.command = ''
+    self.com_auto = ['LASERON', 'LASEROFF', 'GPS']
+    self.com_arrows = ['<-', '-^-', '->', '-V-']
+    self.com_known = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
+    self.reset = resetCommandKey
+    self.endcom = endCommandKey
+    self.ResetValues()
 
-def GetListsOfCommands(command):
-  keywords = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
-  if   isinstance(command, list) and len(command) == 1 and ',' in command[0]: command = command[0].split(',')
-  elif isinstance(command, str ) and ',' in command: command = command.split(',')
-  if not isinstance(command, list): command = [command]
-  keycommands = {}
-  arrowcommands = []
-  goto = []
-  othercommands = []
-  while len(command) > 0:
-    commands = command
-    command = []
-    for c in commands:
-      if c == '': continue
-      arrowcommands, c = GetArrows(c)
-      k = IsValueCommand(c)
-      if not k: 
-        if c != '': goto.append(c)
-        continue
-      else:
-        value, other = SearchForValue(c, k)
-        keycommands[k] = value
-        command += other
-  return arrowcommands, keycommands, goto
+  def ResetValues(self):
+    self.arrows = []
+    self.known = {}
+    self.other = []
+    self.auto = []
+
+  def GetDic(self):
+    outdic = {}
+    if self.arrows != []: outdic['arrows'] = self.arrows
+    if self.auto   != []: outdic['auto']   = self.auto
+    if self.known  != {}: outdic['known']  = self.known
+    if self.other  != []: outdic['other']  = self.other
+    return outdic
+    
+  def read(self, c):
+    self.command += c
+    if self.reset in self.command: self.command = self.command[self.command.index(self.reser)+len(self.reset):]
+    return self.process()
+
+  def process(self):
+    self.GetArrows()
+    self.GetAutoCommands()
+    self.GetKnownCommands()
+    outdic = self.GetDic()
+    self.ResetValues()
+    return outdic
+
+  def GetArrows(self):
+    ''' Command must be a string '''
+    for a in self.com_arrows: 
+      n = self.command.count(a)
+      for i in range(n): self.arrows.append(a)
+      self.command = self.command.replace(a, '')
+
+  def GetAutoCommands(self):
+    ''' Command must be a string '''
+    for a in self.com_auto: 
+      n = self.command.count(a)
+      for i in range(n): self.auto.append(a)
+      self.command = self.command.replace(a, '')
+
+  def GetKnownCommands(self):
+    if not self.endcom in self.command: return
+    else:
+      command = self.command[:self.command.index(self.endcom)]
+      self.command = self.command[self.command.index(self.endcom)+len(self.endcom):]
+    while self.IsValueKnownCommand(command):
+      k = self.IsValueKnownCommand(command)
+      val, command = self.SearchForValue(k, command)
+      self.known[k] = val
+    if command != '': self.other.append(command)
+
+  def IsValueKnownCommand(self, command):
+    ''' Command must be a string '''
+    print('Checking command: ', command)
+    for k in self.com_known:
+      if k in command: return k
+    return False
+
+  def SearchForValue(self, k, command):
+    ''' For example, command = "M55STEP4.5", k = "STEP"... returns [4.5, "M55"] '''
+    other = ''; val = ''
+    precommand = command[:command.index(k)]
+    if precommand != '': other += (precommand)
+    postcommand = command[command.index(k)+len(k):]
+    for c in postcommand:
+      if c.isdigit() or c=='.': val += c
+      else: break
+    postcommand = postcommand[len(val):]
+    val = float(val)
+    if postcommand != '': other += (postcommand)
+    return val, other
 
 if __name__=='__main__':
-  command = sys.argv[1]
-  arrowcommands, keycommands, goto = GetListsOfCommands(command)
-  for a in arrowcommands: print(' >> Moving to ', a)
-  for k in keycommands  : print(' >> Executing [%s] (%1.4f)'%(k, keycommands[k]))
-  for g in goto         : print(' >> GoTo %s'%g)
+  s  = SerialReader()
+  cp = CommandParser()
+  while True:
+    fullcommands = cp.read(s.read(False))
+    if fullcommands != {}: print(fullcommands)
