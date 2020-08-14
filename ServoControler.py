@@ -21,7 +21,7 @@ GPIO.setup(11,GPIO.OUT)
 GPIO.setup(12,GPIO.OUT)
 
 class ServoControl:
-  def __init__(self, pin1=11, pin2=12, verbose=False):
+  def __init__(self, pin1=12, pin2=11, verbose=False):
     ''' Initialize servos and angles '''
     self.servo1 = GPIO.PWM(pin1,50) 
     self.servo2 = GPIO.PWM(pin2,50) 
@@ -33,6 +33,8 @@ class ServoControl:
     self.azm_last  = 0
     self.verbose = verbose
     self.step = 10 # from 0 to 100
+    self.slow = True
+    self.GoToStandbyPosition()
 
   def SetStep(self, step=10):
     self.step = step
@@ -85,6 +87,11 @@ class ServoControl:
     self.azm_last = azm
     return oazm
 
+  def GoTo(self, alt, azm):
+    ''' Moves to alt, azm '''
+    self.GoToAlt(alt)
+    self.GoToAzm(azm)
+
   def MoveServo(self, servo, angle, initial_angle):
     if self.slow:
       i = initial_angle
@@ -101,8 +108,8 @@ class ServoControl:
       servo.ChangeDutyCycle(2+(angle/18))
     else:
       servo.ChangeDutyCycle(2+(angle/18))
-    time.sleep(0.5)
-    self.servo1.ChangeDutyCycle(0)
+    time.sleep(0.05)
+    servo.ChangeDutyCycle(0)
 
   def GoToAngleRaw(self, alt, azm):
     ''' Input must be in degrees and in correct ranges '''
@@ -126,44 +133,33 @@ class ServoControl:
   def GoToStandbyPosition(self):
     ''' Goes to STANDBY by looking to the zenit '''
     self.GoToAzm(90)
-    self.GoToAlt(80)
-    time.sleep(0.2)
-    self.GoToAlt(100)
-    time.sleep(0.2)
+    self.GoToAlt(89)
+    time.sleep(0.1)
+    self.GoToAlt(91)
+    time.sleep(0.1)
     self.GoToAlt(90)
 
   def SayYes(self):
     ''' Says yes '''
     for i in range(3):
       self.GoToAlt(65)
-      time.sleep(0.3)
+      time.sleep(0.01)
       self.GoToAlt(40)
-      time.sleep(0.6)
+      time.sleep(0.1)
 
   def SayNo(self):
     ''' Says no '''
-    self.GoToAlt(55)
+    self.GoToAlt(90)
     for i in range(3):
       self.GoToAzm(75)
-      time.sleep(0.3)
+      time.sleep(0.05)
       self.GoToAzm(105)
-      time.sleep(0.6)
+      time.sleep(0.1)
 
   ########## Commands
-  def InterpretArrows(self, arrows):
+  def MoveArrows(self, arrows):
     ''' Move the servo in given steps according to arrows '''
-    for c in arrows:
-      if c == '->': self.
     pass
-
-  def InterpretKeyCommands(self, keycommands):
-    ''' Thats a dictionary with command : value '''
-    pass
-
-  def GoTo(self, val):
-    ''' Go to an object '''
-    pass
-
 
 if __name__=='__main__':
   pass

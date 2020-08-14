@@ -84,7 +84,9 @@ class ObjectFinder:
     if self.verbose: print('%s: [ra, dec] = [%1.3f, %1.3f]'%(name, coor.ra, coor.dec))
     return coor
 
-  def ToAltAzm(self, coordinates):
+  def ToAltAzm(self, coordinates, dec=0):
+    if dec != 0: # input is RA, DEC
+      coordinates = SkyCoord(ra=coordinates*u.degree, dec=dec*u.degree)
     self.UpdateTime()
     coor = coordinates.transform_to(AltAz(obstime=self.time, location=self.coor))
     alt = coor.alt

@@ -16,8 +16,11 @@ endCommandKey = 'SEND'
 keywords = [ '<-', '-^-', '->', '-V-']
 
 class SerialReader:
-  def __init__(self):
+  def __init__(self, led=None):
+    self.led = led
+    if self.led!=None: self.led.Red()
     self.initialize()
+    self.t0 = time.time()
 
   def initialize(self):
     self.ser = ''
@@ -26,12 +29,20 @@ class SerialReader:
       time.sleep(0.5)
 
   def connect(self):
+    #if int(time.time()-self.t0) % 10 == 0:
+    #  self.ser
     try:
-      self.ser = serial.Serial(serialName,9600,timeout=1)
-      line = self.ser.readline().decode("utf-8")
+      if self.ser == '': self.ser = serial.Serial(serialName,9600,timeout=1)
     except:
-      self.ser = ''
+      if self.led!=None: self.led.Red()
       print('Cannot link with app. Waiting...')
+    if self.ser!='':
+      try:
+        line = self.ser.readline().decode("utf-8")
+      except:
+        print('Closing serial port...')
+        self.ser.close()
+        if self.led!=None: self.led.Red()
 
   def read(self, verbose=0):
     if verbose: print('reading...')
@@ -41,18 +52,26 @@ class SerialReader:
       try:
         line = self.ser.readline().decode("utf-8")
         line = line.replace(' ', '')
+        if self.led!=None: self.led.Green()
       except:
         self.initialize()
     if verbose: print('[command] = ', line)
+    if self.led!=None: self.led.Blue()
     return line 
+
+  def Disconnect(self):
+    if self.ser != '': self.ser.close()
+
+  def Connect(self):
+    if self.ser != '': self.ser.open()
 
 ##################################################################
 ### GPS reader
 import pynmea2, time
 
-def GPSread(servoCtrl=None, verbose=False, maxtime=60):
+def GPSread(servoCtrl=None, led=None, verbose=False, maxtime=60):
   if servoCtrl != None: servoCtrl.GoToStandbyPosition()
-  s = SerialReader()
+  s = SerialReader(led=led)
   phrase = ''
   t0 = time.time()
   lat, lon, alt, d = [0, 0, 0, 0]
@@ -67,16 +86,12 @@ def GPSread(servoCtrl=None, verbose=False, maxtime=60):
       if not (pr.startswith('$GPRMC,') or pr.startswith('$GPGGA,')): continue
       p = pynmea2.parse(pr)
       if pr.startswith('$GPRMC'):
-        print('pr = ', pr)
-        if ',,' in pr or pr.count(',') < 12: continue
-        print('pr OK!')
+        if pr.count(',,') > 1: continue
         if hasattr(p, 'latitude'):  lat = p.latitude
         if hasattr(p, 'longitude'): lon = p.longitude
         if hasattr(p, 'datetime'):  d = p.datetime
       else:
-        print('pr2 = ', pr)
-        if pr.count(',') < 13: continue
-        print('pr2 OK!')
+        if pr.count(',,') > 2: continue
         if hasattr(p, 'altitude'): alt = p.altitude
   if verbose:
     print('Latitude  = ', lat)
@@ -88,6 +103,7 @@ def GPSread(servoCtrl=None, verbose=False, maxtime=60):
     if d == 0: d = datetime.datetime(2020,9,1,0,0,0)
     if servoCtrl != None: servoCtrl.SayNo()
   elif servoCtrl != None: servoCtrl.SayYes()
+  s.Disconnect()
   return [lat, lon, alt, d.month, d.day, d.hour, d.minute, d.second, d.year, 0]
   #lat, lon, alt, month, day, h, minute, sec, year, utcoffset = GPSreader()
 
@@ -122,7 +138,7 @@ class CommandParser:
     
   def read(self, c):
     self.command += c
-    if self.reset in self.command: self.command = self.command[self.command.index(self.reser)+len(self.reset):]
+    if self.reset in self.command: self.command = self.command[self.command.index(self.reset)+len(self.reset):]
     return self.process()
 
   def process(self):
@@ -160,7 +176,6 @@ class CommandParser:
 
   def IsValueKnownCommand(self, command):
     ''' Command must be a string '''
-    print('Checking command: ', command)
     for k in self.com_known:
       if k in command: return k
     return False
@@ -175,13 +190,14 @@ class CommandParser:
       if c.isdigit() or c=='.': val += c
       else: break
     postcommand = postcommand[len(val):]
-    val = float(val)
+    val = float(val) if val != '' else 0
     if postcommand != '': other += (postcommand)
     return val, other
 
 if __name__=='__main__':
   s  = SerialReader()
   cp = CommandParser()
+  fullcommands = {}
   while True:
     fullcommands = cp.read(s.read(False))
     if fullcommands != {}: print(fullcommands)
