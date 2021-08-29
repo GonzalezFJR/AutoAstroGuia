@@ -3,17 +3,31 @@
  I'm using BlueTooth Serial Controller
  To reset a command, send 'RESET'
  To finish a command, send 'SEND'
+
+ Flechas:
+ [ '<-', '-^-', '->', '-V-']
+
+ 'RESET', 'SEND'
+ self.com_auto = ['LASERON', 'LASEROFF', 'GPS']
+ self.com_arrows = ['<-', '-^-', '->', '-V-']
+ self.com_known = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
+ 9+16
+ M, NGC, IC, HD
+
 '''
 
 import serial
 import time, datetime
 import os, sys
+import pytz
+
+timezone = "Europe/Madrid"
+utc_offset = int(datetime.datetime.now(pytz.timezone(timezone)).strftime('%z').replace('0',    ''))
 
 serialName = '/dev/rfcomm0'
 timeSleep = 0.001
 resetCommandKey = 'RESET'
 endCommandKey = 'SEND'
-keywords = [ '<-', '-^-', '->', '-V-']
 
 class SerialReader:
   def __init__(self, led=None):
@@ -44,10 +58,11 @@ class SerialReader:
         self.ser.close()
         if self.led!=None: self.led.Red()
 
-  def read(self, verbose=0):
+  def read(self, tmax=5, verbose=0):
+    t0 = time.time()
     if verbose: print('reading...')
     line = ''
-    while line == '':
+    while line == '' and (time.time()-t0) < tmax:
       time.sleep(timeSleep)
       try:
         line = self.ser.readline().decode("utf-8")
@@ -78,7 +93,14 @@ def GPSread(servoCtrl=None, led=None, verbose=False, maxtime=60):
   #while not (phrase.startswith('$GPRMC,') and (not ',,' in phrase) and (phrase.count(',')>=12)) or not (phrase.startswith('$GPGGA,') and phrase.count(',') >= 14):
   while (lat==0) or (lon==0) or (alt==0) or (d==0):
     t = time.time()-t0
-    if t > maxtime: break
+    last_ti = 0
+    ti = int(t)
+    if ti > last_ti:
+      print('     > [%i s] waiting for GPS... (max time = %i s)'%(ti, maxtime))
+      last_ti = ti
+    if t > maxtime: 
+      print('     > GPS NOT FOUND!! ')
+      break
     r = s.read()
     phrase = r 
     if not isinstance(phrase, list): phrase = [phrase]
@@ -93,18 +115,19 @@ def GPSread(servoCtrl=None, led=None, verbose=False, maxtime=60):
       else:
         if pr.count(',,') > 2: continue
         if hasattr(p, 'altitude'): alt = p.altitude
-  if verbose:
-    print('Latitude  = ', lat)
-    print('Longitude = ', lon)
-    print('Altitude  = ', alt)
-    print('Date      = ', d)
+  print('      > GPS OK!')
+  print('      > Latitude    ', lat)
+  print('      > Longitude   ', lon)
+  print('      > Altitude    ', alt)
+  print('      > Date        ', d)
+  print('      > UTC offset  ', utc_offset)
   if (lat==0) or (lon==0) or (alt==0) or (d==0):
     print('ERROR: could not connect to GPS!')
     if d == 0: d = datetime.datetime(2020,9,1,0,0,0)
     if servoCtrl != None: servoCtrl.SayNo()
   elif servoCtrl != None: servoCtrl.SayYes()
   s.Disconnect()
-  return [lat, lon, alt, d.month, d.day, d.hour, d.minute, d.second, d.year, 0]
+  return [lat, lon, alt, d.month, d.day, d.hour, d.minute, d.second, d.year, utc_offset]
   #lat, lon, alt, month, day, h, minute, sec, year, utcoffset = GPSreader()
 
 

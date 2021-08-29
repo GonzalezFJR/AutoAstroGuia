@@ -27,13 +27,13 @@ class ObjectFinder:
     ''' Read all catalogs and store as tables '''
     self.catalogs = {}
     for cat in self.availableCatalogs:
+      print('      > Loading catalogue %s...'%cat)
       cattxt = self.pathToCatalogs+cat+'.txt'
       if not os.path.isfile(cattxt):
         print('WARNING: catlog "%s" not found...'%cattxt)
         continue
       tab = np.genfromtxt(cattxt, dtype='str')
       self.catalogs[cat] = tab
-      print('Loaded catalogue %s'%cat)
 
   def FindInCatalog(self, name):
     ''' Search for object in catalof and returns ra, dec '''

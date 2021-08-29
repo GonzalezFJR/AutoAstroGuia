@@ -3,35 +3,43 @@ import ServoControler
 import ObjectFinder
 import LaserControler
 import LedControler
- 
 
 from SerialReader import GPSread
 import time, os, sys
 
 ### Create a servo control
+print('>> [Initializing] Servo controler...')
 servo = ServoControler.ServoControl()
 
 ### Create laser controler
+print('>> [Initializing] Laser controler...')
 laser = LaserControler.Laser()
 
 ### Create laser controler
 # RED : bluetood not connected - waiting
 # GREE: standby - receiving commands
 # BLUE: working
+print('>> [Initializing] LED controler...')
 led = LedControler.Led()
 led.Red()
 
 ### Get GPS coordinates
-gps = GPSread(servoCtrl=servo, led=led, maxtime=180)
+print('>> [Initializing] GPS...')
+lat, lon, alt, month, day, h, minute, sec, year, utcoffset = [43.36, -5.85, 200, 10, 1, 21, 30, 0, 2021, 2]
+gps = GPSread(servoCtrl=servo, led=led, maxtime=120)
 lat, lon, alt, month, day, h, minute, sec, year, utcoffset = gps
 t0 = time.time()
 
 ### Create the object finder
+print('>> [Initializing] Object finder...')
 o = ObjectFinder.ObjectFinder(lat, lon, alt, month, day, h, minute, sec, year, utcoffset)
 
 # Create a serial reader and command parser
+print('>> [Initializing] Serial reader...')
 s  = SerialReader.SerialReader(led)
 cp = SerialReader.CommandParser()
+
+print('>> [Initializing] Done! Listening...')
 
 #############################################################################################
 #############################################################################################
@@ -52,17 +60,20 @@ def ResetGPS():
 def GetCommand():
   command = {}
   while command == {}:
-    command = cp.read(s.read(False))
+    command = cp.read(s.read(verbose=False))
   return command
 
 def InterpretCommand(command):
   if command == {}: return
+  else:
+    print(">> [Command] ", command)
   if 'auto' in command:
     # auto: laserON, laserOFF, GPS
     for c in command['auto']:
       if   c == 'GPS'     : ResetGPS() 
-      elif c == 'LASERON' : laser.On()
-      elif c == 'LASEROFF': laser.Off()
+      elif c == 'LASER'   : laser.ChangeStatus() 
+      #elif c == 'LASERON' : laser.On()
+      #elif c == 'LASEROFF': laser.Off()
   if 'known' in command:
     # known: AZM, ALT, DEC, RA
     if 'ALT' in command['known']: servo.GoToAlt(command['known']['ALT'])

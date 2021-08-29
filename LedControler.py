@@ -10,6 +10,7 @@ import RPi.GPIO as GPIO
 import time
 
 # Set GPIO numbering mode
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
 
 # Set servos to their pins

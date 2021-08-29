@@ -14,6 +14,7 @@ import time
 '''
 
 # Set GPIO numbering mode
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
 
 # Set servos to their pins
@@ -47,13 +48,13 @@ class ServoControl:
     ''' Calibrate altitude angle '''
     if alt0 == '': alt0 = self.alt_last
     self.alt0 = alt0
-    if self.verbose: print('Calibrating altitude angle to %1.2fº'%self.alt0)
+    if self.verbose: print('Calibrating altitude angle to %1.2fo'%self.alt0)
 
   def SetAzm0(self, azm0=''):
     ''' Calibrate azimuth angle... 0 should be north '''
     if azm0 == '': azm0 = self.azm_last
     self.azm0 = azm0
-    if self.verbose: print('Calibrating azimuth angle to %1.2fº'%self.azm0)
+    if self.verbose: print('Calibrating azimuth angle to %1.2fo'%self.azm0)
 
   def LocalAzimuth(self, ang=0):
     ''' Calculates local (calibrated) values
@@ -115,7 +116,7 @@ class ServoControl:
     ''' Input must be in degrees and in correct ranges '''
     self.GoToAlt(alt)
     self.GoToAzm(azm)
-    if self.verbose: print('Pointing to [%1.2fº, %1.2fº]'%(alt, azm))
+    if self.verbose: print('Pointing to [%1.2fo, %1.2fo]'%(alt, azm))
 
   def GoToAngle(self, alt, azm):
     ''' Input must be in degrees and in correct ranges '''
