@@ -2,7 +2,7 @@
   By default, connect laser to pin 16 (eath to pin 14)
 '''
 
-LASER_PIN = 16
+LASER_PIN = 7
 
 import RPi.GPIO as GPIO
 import time
@@ -42,3 +42,10 @@ class Laser:
   def ChangeStatus(self):
     self.Off() if self.status else self.On()
 
+if __name__=='__main__':
+  l = Laser()
+  while 1:
+    l.On()
+    time.sleep(1)
+    l.Off()
+    time.sleep(1)

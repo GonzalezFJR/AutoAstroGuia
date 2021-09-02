@@ -56,6 +56,7 @@ def ResetGPS():
   o.SetCoor(lat, lon, alt)
   o.SetTime(day, month, year, h, minute, sec, utcoffset)
   s.Connect()
+  cp.command=''
 
 def GetCommand():
   command = {}

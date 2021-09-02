@@ -13,16 +13,19 @@ import time
 
 '''
 
+PIN_SERVO_1 = 16
+PIN_SERVO_2 = 18
+
 # Set GPIO numbering mode
-GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
 
 # Set servos to their pins
-GPIO.setup(11,GPIO.OUT)
-GPIO.setup(12,GPIO.OUT)
+GPIO.setup(PIN_SERVO_1,GPIO.OUT)
+GPIO.setup(PIN_SERVO_2,GPIO.OUT)
 
 class ServoControl:
-  def __init__(self, pin1=12, pin2=11, verbose=False):
+  def __init__(self, pin1=PIN_SERVO_2, pin2=PIN_SERVO_1, verbose=False):
     ''' Initialize servos and angles '''
     self.servo1 = GPIO.PWM(pin1,50) 
     self.servo2 = GPIO.PWM(pin2,50) 
@@ -163,4 +166,10 @@ class ServoControl:
     pass
 
 if __name__=='__main__':
-  pass
+  servo = ServoControl()
+  while(1):
+   servo.SayNo()
+   time.sleep(1)
+   servo.SayYes()
+   time.sleep(1)
+  

@@ -2,9 +2,9 @@
   By default, connect laser to pin 16 (eath to pin 14)
 '''
 
-pRED  = 31
-pGREEN= 33
-pBLUE = 35
+pRED  = 11
+pGREEN= 13
+pBLUE = 15
 
 import RPi.GPIO as GPIO
 import time
@@ -20,6 +20,7 @@ GPIO.setup(pBLUE ,GPIO.OUT)
 
 class Led:
   def __init__(self):
+    self.isOff = True
     self.Off()
     self.Blink(False)
 
@@ -30,24 +31,40 @@ class Led:
     GPIO.output(pRED,   GPIO.LOW)
     GPIO.output(pBLUE,  GPIO.LOW)
     GPIO.output(pGREEN, GPIO.LOW)
+    self.isOff = True
+
+  def IsOn(self):
+    self.isOff = False
 
   def Blue(self):
     self.Off()
     GPIO.output(pBLUE,  GPIO.HIGH)
+    self.IsOn()
 
   def Red(self):
     self.Off()
     GPIO.output(pRED,  GPIO.HIGH)
+    self.IsOn()
 
   def Green(self):
     self.Off()
     GPIO.output(pGREEN,  GPIO.HIGH)
+    self.IsOn()
 
   def White(self):
     self.Off()
     GPIO.output(pRED,  GPIO.HIGH)
     GPIO.output(pGREEN,GPIO.HIGH)
     GPIO.output(pBLUE, GPIO.HIGH)
+    self.IsOn()
+
+  def blueblink(self):
+    if self.isOff: self.Blue()
+    else: self.Off()
+
+  def redblink(self):
+    if self.isOff: self.Red()
+    else: self.Off()
 
 
 if __name__=='__main__':

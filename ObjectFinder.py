@@ -13,7 +13,7 @@ class ObjectFinder:
     ''' Initialize with local values of space and time '''
     self.SetCoor(lat, lon, alt)
     self.SetTime(day,month,year,h,minut,seg,utcoffset)
-    self.verbose = False
+    self.verbose = True
     self.LoadFromCatalogue = True
     self.pathToCatalogs = pathToCatalogs
     self.availableCatalogs = availableCatalogs
@@ -81,16 +81,20 @@ class ObjectFinder:
       coor = SkyCoord(ra=res[0]*u.degree, dec=res[1]*u.degree)
     else:
       coor = SkyCoord.from_name(name)
-    if self.verbose: print('%s: [ra, dec] = [%1.3f, %1.3f]'%(name, coor.ra, coor.dec))
+    if self.verbose: 
+      ra = coor.ra.hour#.degree; 
+      dec = coor.dec#.degree
+      print('[%s]: [ra, dec] = [%s, %s]'%(name, ra, dec))
     return coor
 
-  def ToAltAzm(self, coordinates, dec=0):
+  def ToAltAzm(self, coordinates, dec=0, name=''):
     if dec != 0: # input is RA, DEC
       coordinates = SkyCoord(ra=coordinates*u.degree, dec=dec*u.degree)
     self.UpdateTime()
     coor = coordinates.transform_to(AltAz(obstime=self.time, location=self.coor))
     alt = coor.alt
     azm = coor.az
+    if self.verbose: print('[%s]: [alt, azm] = [%1.3f, %1.3f]'%(name, alt.degree, azm.degree))
     return alt.degree, azm.degree
 
   def GetLocalSkyCoorFromName(self, name):
@@ -98,7 +102,7 @@ class ObjectFinder:
     coor = self.GetSkyCoorFromName(name)
     if   coor == None: # Not found
       return None
-    return self.ToAltAzm( coor )
+    return self.ToAltAzm( coor, name=name)
 
   def TransformCoordinates(self, alt, azm):
     ''' Transform sky coordinates to alt in [0, 180], azm in [-90, 90] '''
@@ -109,6 +113,7 @@ class ObjectFinder:
 
   def GetLaserAngleForObj(self, name):
     ''' Get alt, azm in good coordinates for a given object '''
+    print(' >> Looking coordintars for %s...'%name)
     coor = self.GetLocalSkyCoorFromName(name)
     if coor == None: return None
     alt, azm = coor
@@ -117,11 +122,12 @@ class ObjectFinder:
 
 if __name__=='__main__':
   obj = sys.argv[1]
-  o = ObjectFinde(43.3, -5.9, 200, 12, 12, 20, 35, 0, 2020, 1)
+  o = ObjectFinder(43.3, -5.9, 200, 9, 2, 0, 10, 0, 2021, 2)
   coor = o.GetSkyCoorFromName(obj)
-  ra = coor.ra.degree; dec = coor.dec.degree
+  ra = coor.ra.hour#.degree; 
+  dec = coor.dec#.degree
   alt, azm   = o.GetLocalSkyCoorFromName(obj)
   alt2, azm2 = o.GetLaserAngleForObj(obj)
-  print('Sky   coordinates: [ra , dec] = [%1.5f, %1.5f]'%(ra, dec))
+  print('Sky   coordinates: [ra , dec] = [%s, %s]'%(ra, dec))
   print('Local coordinates: [alt, azm] = [%1.5f, %1.5f]'%(alt, azm))
   print('Laser goes to    : [alt, azm] = [%1.5f, %1.5f]'%(alt2, azm2))

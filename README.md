@@ -20,6 +20,15 @@ Check this: https://raspberrypi.stackexchange.com/questions/51548/raspberry-pi-3
 Use the Android app: "BlueTooth Serial Controler"
 For the GPS sharing, use the Android app: "Share GPS"
 
+To activate the bluetooth listening, run:
+
+    sudo rfcomm watch hci0
+
+That creates a connection to /dev/rfcomm0
+To start at boot, add the commands in:
+
+    sudo vi /etc/rc.local
+
 # AutoAstroGuia
 Software for the auto-astroguide project.
 

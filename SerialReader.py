@@ -48,8 +48,9 @@ class SerialReader:
     try:
       if self.ser == '': self.ser = serial.Serial(serialName,9600,timeout=1)
     except:
-      if self.led!=None: self.led.Red()
+      #if self.led!=None: self.led.Red()
       print('Cannot link with app. Waiting...')
+      self.led.redblink()
     if self.ser!='':
       try:
         line = self.ser.readline().decode("utf-8")
@@ -91,10 +92,12 @@ def GPSread(servoCtrl=None, led=None, verbose=False, maxtime=60):
   t0 = time.time()
   lat, lon, alt, d = [0, 0, 0, 0]
   #while not (phrase.startswith('$GPRMC,') and (not ',,' in phrase) and (phrase.count(',')>=12)) or not (phrase.startswith('$GPGGA,') and phrase.count(',') >= 14):
+  led.blueblink()
   while (lat==0) or (lon==0) or (alt==0) or (d==0):
     t = time.time()-t0
     last_ti = 0
     ti = int(t)
+    if not led is None: led.blueblink()
     if ti > last_ti:
       print('     > [%i s] waiting for GPS... (max time = %i s)'%(ti, maxtime))
       last_ti = ti
@@ -138,7 +141,8 @@ class CommandParser:
 
   def __init__(self):
     self.command = ''
-    self.com_auto = ['LASERON', 'LASEROFF', 'GPS']
+    self.com_auto = ['LASER', 'GPS']
+    #self.com_auto = ['LASERON', 'LASEROFF', 'GPS']
     self.com_arrows = ['<-', '-^-', '->', '-V-']
     self.com_known = ['STEP', 'AZM', 'ALT', 'DEC', 'RA']
     self.reset = resetCommandKey
